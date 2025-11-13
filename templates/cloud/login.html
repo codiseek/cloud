@@ -1,0 +1,160 @@
+{% extends 'cloud/base.html' %}
+
+{% block title %}DevCloud - Вход{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-dark-300 flex items-center justify-center py-8 px-4">
+    <div class="bg-dark-200 rounded-xl border border-gray-700 w-full max-w-md">
+        <!-- Вкладки -->
+        <div class="flex border-b border-gray-700">
+            <button id="loginTab" class="flex-1 py-4 text-center font-medium border-b-2 border-indigo-500 text-indigo-400">Вход</button>
+            <button id="registerTab" class="flex-1 py-4 text-center font-medium text-gray-400 hover:text-white transition-colors">Регистрация</button>
+        </div>
+        
+        <div class="p-6">
+            <!-- Форма входа -->
+            <div id="loginForm">
+                <h3 class="text-xl font-semibold mb-6 text-center">Вход в DevCloud</h3>
+                
+                <form id="loginFormData">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="block text-gray-400 mb-2">Логин</label>
+                        <input type="text" name="username" class="w-full bg-dark-300 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Введите ваш логин" required>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <label class="block text-gray-400 mb-2">Пароль</label>
+                        <input type="password" name="password" class="w-full bg-dark-300 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Введите пароль" required>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg mb-4 transition-colors">
+                        Войти
+                    </button>
+                </form>
+
+                <div class="text-center">
+                    <a href="/" class="text-indigo-400 hover:text-indigo-300 text-sm">Вернуться на главную</a>
+                </div>
+            </div>
+            
+            <!-- Форма регистрации -->
+            <div id="registerForm" class="hidden">
+                <h3 class="text-xl font-semibold mb-6 text-center">Регистрация в DevCloud</h3>
+                
+                <form id="registerFormData">
+                    {% csrf_token %}
+                    <div class="mb-4">
+                        <label class="block text-gray-400 mb-2">Придумайте логин</label>
+                        <input type="text" name="username" class="w-full bg-dark-300 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="Только латинские буквы и цифры" required>
+                        <p class="text-xs text-gray-500 mt-1">Логин будет приведен к нижнему регистру</p>
+                    </div>
+                    
+                    <div class="flex items-center mb-6">
+                        <input type="checkbox" id="agreeTerms" name="agree_terms" class="mr-2" required>
+                        <label for="agreeTerms" class="text-gray-400 text-sm">Согласен с условиями использования</label>
+                    </div>
+                    
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                        Зарегистрироваться
+                    </button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <a href="/" class="text-indigo-400 hover:text-indigo-300 text-sm">Вернуться на главную</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Элементы
+    const loginTab = document.getElementById('loginTab');
+    const registerTab = document.getElementById('registerTab');
+    const loginForm = document.getElementById('loginForm');
+    const registerForm = document.getElementById('registerForm');
+    const loginFormData = document.getElementById('loginFormData');
+    const registerFormData = document.getElementById('registerFormData');
+
+    // Переключение между вкладками
+    loginTab.addEventListener('click', () => {
+        loginTab.classList.add('border-indigo-500', 'text-indigo-400');
+        loginTab.classList.remove('text-gray-400');
+        registerTab.classList.remove('border-indigo-500', 'text-indigo-400');
+        registerTab.classList.add('text-gray-400');
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+    });
+
+    registerTab.addEventListener('click', () => {
+        registerTab.classList.add('border-indigo-500', 'text-indigo-400');
+        registerTab.classList.remove('text-gray-400');
+        loginTab.classList.remove('border-indigo-500', 'text-indigo-400');
+        loginTab.classList.add('text-gray-400');
+        registerForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+    });
+
+    // Вход
+    loginFormData.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        showLoader();
+        
+        fetch('{% url "login" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoader();
+          if (data.success) {
+    showNotification('Успешный вход!');
+    // Немедленный редирект
+    window.location.href = data.redirect_url || '/';
+} else {
+                showNotification(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            hideLoader();
+            showNotification('Ошибка сети', 'error');
+        });
+    });
+
+    // Регистрация
+    registerFormData.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        showLoader();
+        
+        fetch('{% url "register" %}', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+           if (data.success) {
+    showNotification(`Регистрация успешна! Ваш пароль: ${data.password}`, 'success');
+    // Немедленный редирект
+    window.location.href = '/';
+} else {
+                showNotification(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            hideLoader();
+            showNotification('Ошибка сети', 'error');
+        });
+    });
+});
+</script>
+{% endblock %}

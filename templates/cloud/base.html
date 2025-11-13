@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}DevCloud - Файлы на 24 часа{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: {
+                            100: '#1e1e2e',
+                            200: '#181825',
+                            300: '#11111b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+  /* Стили для скроллбара */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: rgba(30, 30, 46, 0.1);
+        border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.3);
+        border-radius: 3px;
+        transition: all 0.3s ease;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(99, 102, 241, 0.5);
+    }
+
+    ::-webkit-scrollbar-thumb:active {
+        background: rgba(99, 102, 241, 0.7);
+    }
+
+    ::-webkit-scrollbar-corner {
+        background: transparent;
+    }
+
+    /* Для Firefox */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(99, 102, 241, 0.3) rgba(30, 30, 46, 0.1);
+    }
+
+    /* Особые стили для модальных окон */
+    .modal-content {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(99, 102, 241, 0.4) rgba(30, 30, 46, 0.2);
+    }
+
+    .modal-content::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .modal-content::-webkit-scrollbar-track {
+        background: rgba(30, 30, 46, 0.2);
+        border-radius: 2px;
+    }
+
+    .modal-content::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.4);
+        border-radius: 2px;
+    }
+
+    /* Стили для таблиц */
+    table::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    /* Плавная прокрутка для всего сайта */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Убираем стандартные outline и добавляем кастомные */
+    *:focus {
+        outline: none;
+    }
+
+    .focus\:ring-1:focus {
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
+    }
+
+    /* Анимация появления скроллбара */
+    @keyframes scrollbar-appear {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    ::-webkit-scrollbar-thumb {
+        animation: scrollbar-appear 0.3s ease;
+    }
+
+    /* Для очень маленьких экранов делаем скроллбар еще тоньше */
+    @media (max-width: 640px) {
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        
+        .modal-content::-webkit-scrollbar {
+            width: 3px;
+        }
+    }
+
+    /* Дополнительные стили для различных элементов */
+    .overflow-y-auto::-webkit-scrollbar,
+    .overflow-x-auto::-webkit-scrollbar,
+    .overflow-auto::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .overflow-y-auto::-webkit-scrollbar-track,
+    .overflow-x-auto::-webkit-scrollbar-track,
+    .overflow-auto::-webkit-scrollbar-track {
+        background: rgba(30, 30, 46, 0.1);
+    }
+
+    .overflow-y-auto::-webkit-scrollbar-thumb,
+    .overflow-x-auto::-webkit-scrollbar-thumb,
+    .overflow-auto::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.3);
+    }
+
+
+    
+        /* Убираем возможные отступы и полосы внизу */
+    html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+    }
+    
+    /* Скрываем возможные полосы в мобильной версии */
+    @media (max-width: 768px) {
+        body::after {
+            display: none !important;
+        }
+        
+        /* Адаптивные уведомления для мобильных */
+        #header-notification {
+            max-width: 200px;
+            margin: 0 auto;
+        }
+        
+        #header-notification > div {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+        }
+    }
+
+
+    @media (max-width: 768px) {
+        #header-notification {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin: 0;
+            padding: 0.5rem;
+            background: rgba(17, 17, 27, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        
+        .container {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+    }
+</style>
+
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-dark-300 text-gray-200 min-h-screen">
+    {% block content %}
+    {% endblock %}
+
+    <!-- Загрузчик -->
+    <div id="globalLoader" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+        <div class="bg-dark-200 rounded-lg p-6 flex items-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mr-4"></div>
+            <span>Загрузка...</span>
+        </div>
+    </div>
+
+    <script>
+        // Глобальные функции
+        function showNotification(message, type = 'success') {
+            const notificationArea = document.getElementById('header-notification');
+            
+            // Создаем элемент уведомления
+            const notification = document.createElement('div');
+            notification.className = `inline-flex items-center px-4 py-2 rounded-lg transition-all duration-300 ${
+                type === 'success' ? 'bg-green-600 text-white' : 
+                type === 'error' ? 'bg-red-600 text-white' : 
+                'bg-blue-600 text-white'
+            }`;
+            notification.innerHTML = `
+                <i class="bi ${type === 'success' ? 'bi-check-circle' : type === 'error' ? 'bi-exclamation-triangle' : 'bi-info-circle'} mr-2"></i>
+                <span>${message}</span>
+            `;
+            
+            // Очищаем предыдущие уведомления
+            notificationArea.innerHTML = '';
+            notificationArea.appendChild(notification);
+            
+            // Автоматически скрываем через 3 секунды
+            setTimeout(() => {
+                notification.classList.add('opacity-0');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        function showLoader() {
+            document.getElementById('globalLoader').classList.remove('hidden');
+        }
+
+        function hideLoader() {
+            document.getElementById('globalLoader').classList.add('hidden');
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getTimeRemaining(expiresAt) {
+            const now = new Date().getTime();
+            const expireTime = new Date(expiresAt).getTime();
+            const diff = expireTime - now;
+            
+            if (diff <= 0) return 'Истекло';
+            
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) return `${hours} ч ${minutes} мин`;
+            return `${minutes} мин`;
+        }
+
+        // Функция для определения типа файла и иконки
+        function getFileIconClass(fileType) {
+            const iconMap = {
+                'archive': 'bi-file-earmark-zip text-indigo-400',
+                'image': 'bi-file-earmark-image text-pink-500',
+                'document': 'bi-file-earmark-pdf text-red-500',
+                'code': 'bi-file-earmark-code text-green-500',
+                'text': 'bi-file-earmark-text text-blue-500'
+            };
+            return iconMap[fileType] || 'bi-file-earmark text-gray-400';
+        }
+
+        // Функция для получения CSRF токена
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]').value;
+        }
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,371 @@
+{% extends 'cloud/base.html' %}
+
+{% block title %}DevCloud - {{ file.original_name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-dark-300 flex items-center justify-center py-8 px-4">
+    <div class="bg-dark-200 rounded-xl border border-gray-700 w-full max-w-4xl mx-4 overflow-hidden shadow-2xl">
+        <!-- Декоративный верхний бар с градиентом -->
+        <div class="h-2 bg-gradient-to-r from-indigo-500 to-purple-500"></div>
+        
+        <div class="p-6 md:p-8">
+            <!-- Заголовок с анимацией -->
+            <div class="text-center mb-8 transform transition-all duration-300 hover:scale-105">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full mb-4 shadow-lg">
+                    <i class="bi bi-cloud-arrow-down text-white text-2xl"></i>
+                </div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent mb-2">DevCloud</h1>
+                <p class="text-gray-400">Ваш файл готов к скачиванию</p>
+            </div>
+
+            <!-- Блок предпросмотра для изображений и видео -->
+            {% if file.file_type == 'image' or file.file_type == 'video' %}
+            <div class="bg-gradient-to-br from-dark-300 to-dark-200 rounded-xl p-6 mb-8 border border-gray-700 shadow-lg">
+                <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                    <i class="bi bi-eye mr-2 text-blue-400"></i>
+                    Предпросмотр
+                </h3>
+                
+                {% if file.file_type == 'image' %}
+                <!-- Предпросмотр изображения -->
+                <div class="text-center">
+                    <img src="{% url 'download' file.short_url %}" 
+                         alt="Превью {{ file.original_name }}"
+                         class="max-h-64 mx-auto rounded-lg cursor-pointer transition-transform duration-300 hover:scale-105 shadow-md"
+                         id="imagePreview">
+                </div>
+                {% elif file.file_type == 'video' %}
+                <!-- Предпросмотр видео -->
+                <div class="text-center">
+                    <video controls class="max-h-64 mx-auto rounded-lg shadow-md" id="videoPreview">
+                        <source src="{% url 'download' file.short_url %}" type="video/mp4">
+                        Ваш браузер не поддерживает видео.
+                    </video>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+
+            <div class="bg-gradient-to-br from-dark-300 to-dark-200 rounded-xl p-6 mb-8 border border-gray-700 shadow-lg relative overflow-hidden">
+
+                <!-- Декоративный элемент -->
+                <div class="absolute -top-10 -right-10 w-20 h-20 bg-indigo-500/10 rounded-full"></div>
+                <div class="absolute -bottom-10 -left-10 w-16 h-16 bg-purple-500/10 rounded-full"></div>
+                
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                    <!-- Левая часть: иконка и информация о файле -->
+                    <div class="flex items-center flex-1 min-w-0">
+                        <div class="w-20 h-20 {% if file.file_type == 'archive' %}bg-indigo-900/30 border border-indigo-500/30{% elif file.file_type == 'image' %}bg-pink-900/30 border border-pink-500/30{% elif file.file_type == 'document' %}bg-red-900/30 border border-red-500/30{% else %}bg-gray-700 border border-gray-600{% endif %} rounded-xl flex items-center justify-center mr-5 flex-shrink-0 shadow-md transform transition-transform duration-300 hover:scale-105">
+                            <i class="{% if file.file_type == 'archive' %}bi bi-file-earmark-zip text-indigo-400{% elif file.file_type == 'image' %}bi bi-file-earmark-image text-pink-400{% elif file.file_type == 'document' %}bi bi-file-earmark-pdf text-red-400{% else %}bi bi-file-earmark text-gray-400{% endif %} text-4xl"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <h2 class="text-xl font-semibold text-white break-words mb-2">{{ file.original_name }}</h2>
+                            <div class="flex flex-wrap items-center gap-3">
+                                <span class="text-gray-300 text-sm bg-gray-700/50 px-2 py-1 rounded-md">{{ file.file_type|upper }}</span>
+                                <span class="text-gray-400 text-sm">{{ file.file_size|filesizeformat }}</span>
+                                <span class="text-gray-400 text-sm flex items-center">
+                                    <i class="bi bi-download mr-1"></i> {{ file.download_count }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Правая часть: кнопка скачивания с улучшенным дизайном -->
+                    <div class="flex-shrink-0">
+                        <a href="{% url 'download' file.short_url %}" 
+                           class="group bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-8 py-4 rounded-xl inline-flex items-center transition-all duration-300 transform hover:scale-105 hover:shadow-lg w-full md:w-auto justify-center relative overflow-hidden">
+                            <div class="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                            <i class="bi bi-cloud-arrow-down-fill mr-3 text-lg"></i>
+                            <span class="font-medium">Скачать сейчас</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Детальная информация с улучшенным дизайном -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- Временная информация с визуальным таймером -->
+                <div class="bg-gradient-to-br from-dark-300 to-dark-200 rounded-xl p-5 border border-gray-700 shadow-md relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-indigo-500/5 rounded-full -mt-8 -mr-8"></div>
+                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                        <i class="bi bi-clock-history mr-2 text-indigo-400"></i>
+                        Время жизни файла
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Загружен:</span>
+                            <span class="text-white font-medium">{{ file.uploaded_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400">Истекает:</span>
+                            <span class="text-white font-medium">{{ file.expires_at|date:"d.m.Y H:i" }}</span>
+                        </div>
+                        <div class="pt-2">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-400">Осталось:</span>
+                                <span class="text-indigo-400 font-semibold text-lg" id="timeRemaining">{{ file.time_remaining }}</span>
+                            </div>
+                            <!-- Прогресс-бар времени -->
+                            <div class="w-full bg-gray-700 rounded-full h-2.5">
+                                <div id="timeProgress" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-2.5 rounded-full transition-all duration-1000"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Дополнительная информация с иконками -->
+                <div class="bg-gradient-to-br from-dark-300 to-dark-200 rounded-xl p-5 border border-gray-700 shadow-md relative overflow-hidden">
+                    <div class="absolute bottom-0 left-0 w-16 h-16 bg-purple-500/5 rounded-full -mb-8 -ml-8"></div>
+                    <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                        <i class="bi bi-info-circle mr-2 text-purple-400"></i>
+                        Информация о файле
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 flex items-center">
+                                <i class="bi bi-filetype-{{ file.file_type }} mr-2"></i> Тип файла:
+                            </span>
+                            <span class="text-white font-medium">{{ file.file_type|upper }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 flex items-center">
+                                <i class="bi bi-hdd mr-2"></i> Размер:
+                            </span>
+                            <span class="text-white font-medium">{{ file.file_size|filesizeformat }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 flex items-center">
+                                <i class="bi bi-download mr-2"></i> Скачиваний:
+                            </span>
+                            <span class="text-white font-medium">{{ file.download_count }}</span>
+                        </div>
+                        {% if file.category %}
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-400 flex items-center">
+                                <i class="bi bi-tag mr-2"></i> Категория:
+                            </span>
+                            <span class="text-white font-medium">{{ file.category.name }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+          
+            <!-- Дополнительные действия -->
+            <div class="bg-gradient-to-br from-dark-300 to-dark-200 rounded-xl p-5 border border-gray-700 shadow-md">
+                <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                    <i class="bi bi-share mr-2 text-green-400"></i>
+                    Поделиться файлом
+                </h3>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button id="copyLinkBtn" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center justify-center transition-colors">
+                        <i class="bi bi-link-45deg mr-2"></i>
+                        Скопировать ссылку
+                    </button>
+                    <button class="flex-1 bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-lg flex items-center justify-center transition-colors">
+                        <i class="bi bi-qr-code mr-2"></i>
+                        Показать QR-код
+                    </button>
+                </div>
+            </div>
+
+            <!-- Дополнительная кнопка скачивания для мобильных с улучшенным дизайном -->
+            <div class="mt-8 md:hidden">
+                <a href="{% url 'download' file.short_url %}" 
+                   class="group bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white px-6 py-4 rounded-xl inline-flex items-center justify-center w-full transition-all duration-300 transform hover:scale-105 hover:shadow-lg relative overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                    <i class="bi bi-cloud-arrow-down-fill mr-3 text-lg"></i>
+                    <span class="font-medium">Скачать файл</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+
+// Функции для просмотра изображений и видео на странице file_info.html
+function initFileInfoPreview() {
+    // Обработчик для изображений
+    const imagePreview = document.getElementById('imagePreview');
+    if (imagePreview) {
+        imagePreview.addEventListener('click', function() {
+            openFullScreenImage(this.src);
+        });
+    }
+    
+    // Обработчик для видео
+    const videoPreview = document.getElementById('videoPreview');
+    if (videoPreview) {
+        // Добавляем кнопку полноэкранного режима
+        const videoContainer = videoPreview.parentNode;
+        const fullscreenBtn = document.createElement('button');
+        fullscreenBtn.className = 'mt-2 text-indigo-400 hover:text-indigo-300 text-sm flex items-center justify-center mx-auto';
+        fullscreenBtn.innerHTML = '<i class="bi bi-arrows-fullscreen mr-1"></i> Полноэкранный режим';
+        fullscreenBtn.addEventListener('click', function() {
+            openFullScreenVideo(videoPreview.querySelector('source').src);
+        });
+        videoContainer.appendChild(fullscreenBtn);
+    }
+}
+
+// Функции для полноэкранного просмотра (аналогичные тем, что в dashboard)
+function openFullScreenImage(src) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="relative w-full h-full flex items-center justify-center">
+            <button class="absolute top-4 right-4 z-10 bg-red-600 hover:bg-red-700 text-white w-10 h-10 rounded-full flex items-center justify-center">
+                <i class="bi bi-x-lg"></i>
+            </button>
+            <img src="${src}" alt="" class="max-w-full max-h-full object-contain rounded-lg">
+        </div>
+    `;
+    
+    modal.querySelector('button').addEventListener('click', function() {
+        document.body.removeChild(modal);
+        document.body.style.overflow = 'auto';
+    });
+    
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+}
+
+function openFullScreenVideo(src) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="relative w-full max-w-4xl mx-4">
+            <button class="absolute -top-12 right-0 z-10 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                <i class="bi bi-x-lg mr-2"></i> Закрыть
+            </button>
+            <div class="bg-black rounded-lg overflow-hidden">
+                <video controls class="w-full" autoplay style="max-height: 80vh;">
+                    <source src="${src}" type="video/mp4">
+                </video>
+            </div>
+        </div>
+    `;
+    
+    modal.querySelector('button').addEventListener('click', function() {
+        const video = modal.querySelector('video');
+        video.pause();
+        document.body.removeChild(modal);
+        document.body.style.overflow = 'auto';
+    });
+    
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    initFileInfoPreview();
+});
+
+
+
+// Обновление оставшегося времени и прогресс-бара
+function updateTimeRemaining() {
+    const expiresAt = new Date('{{ file.expires_at|date:"c" }}').getTime();
+    const uploadedAt = new Date('{{ file.uploaded_at|date:"c" }}').getTime();
+    const now = new Date().getTime();
+    const diff = expiresAt - now;
+    const totalTime = expiresAt - uploadedAt;
+    
+    // Расчет процента оставшегося времени
+    const percentRemaining = Math.max(0, (diff / totalTime) * 100);
+    document.getElementById('timeProgress').style.width = percentRemaining + '%';
+    
+    if (diff <= 0) {
+        document.getElementById('timeRemaining').textContent = 'Истекло';
+        document.getElementById('timeProgress').style.width = '0%';
+        document.querySelectorAll('a[href*="download"]').forEach(link => {
+            link.classList.add('opacity-50', 'cursor-not-allowed', 'pointer-events-none');
+            link.innerHTML = '<i class="bi bi-clock-history mr-2"></i><span>Время истекло</span>';
+        });
+        return;
+    }
+    
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) {
+        document.getElementById('timeRemaining').textContent = `${hours} ч ${minutes} мин`;
+    } else {
+        document.getElementById('timeRemaining').textContent = `${minutes} мин`;
+    }
+}
+
+// Копирование ссылки
+document.getElementById('copyLinkBtn').addEventListener('click', function() {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(function() {
+        // Временная смена текста кнопки
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i class="bi bi-check-lg mr-2"></i>Скопировано!';
+        this.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+        this.classList.add('bg-green-600', 'hover:bg-green-500');
+        
+        setTimeout(() => {
+            this.innerHTML = originalText;
+            this.classList.remove('bg-green-600', 'hover:bg-green-500');
+            this.classList.add('bg-gray-700', 'hover:bg-gray-600');
+        }, 2000);
+    }.bind(this));
+});
+
+// Добавляем отслеживание кликов по кнопкам скачивания
+document.querySelectorAll('a[href*="download"]').forEach(link => {
+    link.addEventListener('click', function(e) {
+        // Можно добавить аналитику или дополнительную логику здесь
+        console.log('Скачивание файла: {{ file.original_name }}');
+        
+        // Добавляем небольшую анимацию при клике
+        this.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            this.style.transform = '';
+        }, 150);
+    });
+});
+
+// Добавляем анимацию появления элементов при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const elements = document.querySelectorAll('.bg-gradient-to-br');
+    elements.forEach((el, index) => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(20px)';
+        
+        setTimeout(() => {
+            el.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            el.style.opacity = '1';
+            el.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+    
+    // Инициализация времени
+    updateTimeRemaining();
+    setInterval(updateTimeRemaining, 60000);
+});
+</script>
+
+<style>
+/* Дополнительные стили для улучшения визуального эффекта */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse-animation {
+    animation: pulse 2s infinite;
+}
+
+/* Стили для плавного появления */
+.bg-gradient-to-br {
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'cloud/base.html' %}
+
+{% block title %}DevCloud - Файл не найден{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-dark-300 flex items-center justify-center py-8 px-4">
+    <div class="bg-dark-200 rounded-xl border border-gray-700 w-full max-w-2xl mx-4">
+        <div class="p-8 text-center">
+            <!-- Иконка -->
+            <div class="w-20 h-20 bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="bi bi-clock-history text-red-500 text-3xl"></i>
+            </div>
+            
+            <!-- Заголовок -->
+            <h1 class="text-2xl font-bold text-white mb-4">Файл недоступен</h1>
+            
+            <!-- Сообщение -->
+            <p class="text-gray-400 mb-6">
+                Срок действия этого файла истёк, или файл был удалён.
+                <br>В DevCloud файлы хранятся не более 24 часов.
+            </p>
+            
+            <!-- Детали -->
+            <div class="bg-dark-300 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-center text-sm text-gray-400">
+                    <i class="bi bi-info-circle mr-2"></i>
+                    <span>Ссылка: <code class="bg-dark-100 px-2 py-1 rounded">{{ request.path }}</code></span>
+                </div>
+            </div>
+            
+            <!-- Действия -->
+            <div class="space-y-4">
+                <a href="{% url 'dashboard' %}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg inline-flex items-center justify-center transition-colors w-full md:w-auto">
+                    <i class="bi bi-house mr-2"></i>
+                    На главную
+                </a>
+                
+                <div class="pt-4 border-t border-gray-700">
+                    <p class="text-gray-500 text-sm">
+                        Хотите поделиться файлами? <a href="{% url 'dashboard' %}" class="text-indigo-400 hover:text-indigo-300">Загрузите новые файлы</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

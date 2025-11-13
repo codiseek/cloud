@@ -1,0 +1,1833 @@
+{% extends 'cloud/base.html' %}
+{% load static %}
+
+{% block content %}
+<!-- Шапка -->
+<!-- Шапка -->
+<header class="bg-dark-200 border-b border-gray-700 py-4 px-6">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold text-indigo-400">DevCloud</h1>
+        
+        <!-- Центральная область для уведомлений -->
+        <div id="header-notification" class="flex-1 mx-2 md:mx-4 text-center">
+            <!-- Уведомления будут появляться здесь -->
+        </div>
+        
+        <div class="flex items-center space-x-2 md:space-x-4">
+            <!-- Кнопка загрузки - текст скрыт на мобильных -->
+            <button id="uploadBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 md:px-4 md:py-2 rounded-lg flex items-center transition-colors">
+                <i class="bi bi-cloud-upload text-lg md:text-base"></i>
+                <span class="hidden md:inline ml-2">Загрузить файл</span>
+            </button>
+            
+            <!-- Меню пользователя -->
+            <div class="relative group">
+                <button class="w-10 h-10 rounded-full bg-dark-100 hover:bg-dark-300 border border-gray-700 flex items-center justify-center transition-colors">
+                    <i class="bi bi-person text-lg"></i>
+                </button>
+                <div class="absolute right-0 mt-2 w-64 bg-dark-200 border border-gray-700 rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-30">
+                    <div class="p-2">
+                        <div class="px-3 py-2 text-sm border-b border-gray-700">
+                            <div class="font-medium">{{ user.username }}</div>
+                            <div class="text-gray-400 text-xs mt-1">
+                                Использовано: <span id="storage-used">{{ storage_used|default:"0" }}</span> / 5 GB
+                            </div>
+                            <!-- Прогресс-бар -->
+                            <div class="w-full bg-dark-300 rounded-full h-2 mt-2">
+                                <div id="storage-progress" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" 
+                                     style="width: {{ storage_percent|default:"0" }}%"></div>
+                            </div>
+                            <div class="text-gray-400 text-xs mt-1 text-right">
+                                <span id="storage-percent">{{ storage_percent|default:"0" }}</span>%
+                            </div>
+                        </div>
+                        <button id="changePasswordBtn" class="block w-full text-left px-3 py-2 text-sm hover:bg-dark-300 rounded transition-colors">
+                            <i class="bi bi-key mr-2"></i>Сменить пароль
+                        </button>
+                        <button onclick="logout()" class="block w-full text-left px-3 py-2 text-sm hover:bg-dark-300 rounded transition-colors">
+    <i class="bi bi-box-arrow-right mr-2"></i>Выйти
+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+    <!-- Основной контент -->
+    <main class="container mx-auto py-8 px-4">
+        <!-- Панель категорий и поиска -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+<div class="flex flex-wrap gap-2" id="categories-container">
+    <button class="category-btn bg-indigo-600 text-white px-4 py-2 rounded-lg transition-colors" 
+            data-category-id="all">
+        Все файлы
+    </button>
+    {% for category in categories %}
+    <button class="category-btn bg-dark-200 hover:bg-dark-100 px-4 py-2 rounded-lg border border-gray-700 transition-colors"
+            data-category-id="{{ category.id }}">
+        {{ category.name }}
+    </button>
+    {% endfor %}
+    <button id="addCategoryBtn" class="bg-dark-200 hover:bg-dark-100 px-4 py-2 rounded-lg border border-gray-700 flex items-center w-10 h-10 justify-center transition-colors">
+        <i class="bi bi-plus"></i>
+    </button>
+</div>
+            <div class="w-full md:w-auto">
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="Поиск файлов..." class="bg-dark-200 border border-gray-700 rounded-lg px-4 py-2 pl-10 w-full md:w-64 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                    <i class="bi bi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Карточки файлов -->
+        <div id="filesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+           {% for file in files %}
+<div class="file-card bg-dark-200 rounded-xl border border-gray-700 p-5 hover:border-indigo-500 transition-all cursor-pointer" 
+     data-file-id="{{ file.id }}" 
+     data-category-id="{% if file.category %}{{ file.category.id }}{% else %}0{% endif %}"
+     data-file-type="{{ file.file_type }}"
+     data-short-url="{{ file.short_url }}">
+
+    <div class="flex justify-between items-start mb-4">
+        <div class="flex items-center">
+            <!-- Убедитесь, что этот блок с классом file-icon существует -->
+            <div class="file-icon w-12 h-12 {% if file.file_type == 'archive' %}bg-indigo-900/30{% elif file.file_type == 'image' %}bg-pink-900/30{% elif file.file_type == 'video' %}bg-purple-900/30{% elif file.file_type == 'document' %}bg-red-900/30{% else %}bg-gray-700{% endif %} rounded-lg flex items-center justify-center mr-3 cursor-pointer hover:scale-105 transition-transform"
+                 data-file-type="{{ file.file_type }}"
+                 data-short-url="{{ file.short_url }}">
+                <i class="{% if file.file_type == 'archive' %}bi bi-file-earmark-zip text-indigo-400{% elif file.file_type == 'image' %}bi bi-file-earmark-image text-pink-500{% elif file.file_type == 'video' %}bi bi-play-circle text-purple-400{% elif file.file_type == 'document' %}bi bi-file-earmark-pdf text-red-500{% else %}bi bi-file-earmark text-gray-400{% endif %} text-2xl"></i>
+            </div>
+            <!-- ... остальная разметка ... -->
+            <div>
+                <span class="font-medium block truncate max-w-[140px]">{{ file.original_name }}</span>
+                <div class="text-xs text-gray-400 mt-1">{{ file.file_type|upper }} / {{ file.file_size|filesizeformat }}</div>
+            </div>
+        </div>
+
+                    <button class="copy-link text-gray-400 hover:text-indigo-400 p-2 rounded-lg bg-dark-300" title="Копировать ссылку" data-short-url="{{ file.short_url }}">
+                        <i class="bi bi-link-45deg"></i>
+                    </button>
+                </div>
+                <div class="flex justify-between items-center mt-4">
+                   <div class="flex gap-2">
+    {% if file.category %}
+    <div class="text-xs bg-indigo-900/30 text-indigo-400 px-2 py-1 rounded">{{ file.category.name }}</div>
+    {% else %}
+    <div class="text-xs bg-gray-700 text-gray-400 px-2 py-1 rounded">Все</div>
+    {% endif %}
+   <div class="text-xs bg-gray-700 px-2 py-1 rounded">
+    {% if file.is_forever %}
+        <i class="bi bi-infinity"></i>
+    {% else %}
+        {{ file.time_remaining }}
+    {% endif %}
+</div>
+</div>
+                    <div class="flex space-x-1">
+                        <button class="download-btn text-gray-400 hover:text-white p-2 rounded-lg bg-dark-300 w-8 h-8 flex items-center justify-center" data-file-id="{{ file.id }}">
+                            <i class="bi bi-download text-sm"></i>
+                        </button>
+                        <button class="delete-btn text-gray-400 hover:text-red-500 p-2 rounded-lg bg-dark-300 w-8 h-8 flex items-center justify-center" data-file-id="{{ file.id }}">
+                            <i class="bi bi-trash text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center py-12">
+                <i class="bi bi-cloud-upload text-4xl text-gray-600 mb-4"></i>
+                <p class="text-gray-400">Нет загруженных файлов</p>
+                <button id="uploadEmptyBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg">
+                    Загрузить первый файл
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+<!-- Компактное модальное окно для просмотра изображений -->
+<div id="imagePreviewModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60] hidden">
+    <div class="relative max-w-4xl max-h-full mx-4">
+        <button id="closeImagePreview" class="absolute -top-12 right-0 z-10 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors">
+            <i class="bi bi-x-lg mr-2"></i> Закрыть
+        </button>
+        <img id="previewImage" src="" alt="" class="max-w-full max-h-[90vh] object-contain rounded-lg">
+    </div>
+</div>
+
+<!-- Компактное модальное окно для просмотра видео -->
+<div id="videoPreviewModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60] hidden">
+    <div class="relative w-full max-w-4xl mx-4">
+        <button id="closeVideoPreview" class="absolute -top-12 right-0 z-10 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors">
+            <i class="bi bi-x-lg mr-2"></i> Закрыть
+        </button>
+        
+        <div class="bg-black rounded-lg overflow-hidden">
+            <video class="w-full" id="previewVideo" style="max-height: 70vh;">
+                <!-- Источники видео будут добавляться через JavaScript -->
+                Ваш браузер не поддерживает видео.
+            </video>
+        </div>
+        
+        <!-- Простые контролы -->
+        <div class="bg-gray-800 p-4 rounded-b-lg">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <!-- Кнопка воспроизведения/паузы -->
+                    <button id="videoPlayPause" class="bg-indigo-600 hover:bg-indigo-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+                        <i class="bi bi-play-fill" id="videoPlayIcon"></i>
+                    </button>
+                    
+                    <!-- Громкость -->
+                    <div class="flex items-center space-x-2">
+                        <button id="videoMute" class="text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-700 transition-colors">
+                            <i class="bi bi-volume-up-fill" id="videoMuteIcon"></i>
+                        </button>
+                        <input type="range" id="videoVolume" class="w-20 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer" min="0" max="100" value="100">
+                    </div>
+                </div>
+                
+                <!-- Прогресс и время -->
+                <div class="flex items-center space-x-2 text-sm text-gray-300">
+                    <span id="videoCurrentTime">0:00</span>
+                    <span>/</span>
+                    <span id="videoDuration">0:00</span>
+                </div>
+            </div>
+            
+            <!-- Прогресс-бар -->
+            <div class="mt-3">
+                <input type="range" id="videoProgress" class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer" min="0" max="100" value="0">
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Модальное окно смены пароля -->
+<div id="changePasswordModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+    <div class="bg-dark-200 rounded-lg w-full max-w-md mx-4 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold">Смена пароля</h3>
+            <button id="closeChangePasswordModal" class="text-gray-400 hover:text-white">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <form id="changePasswordForm">
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="block text-gray-400 mb-2">Текущий пароль</label>
+                <input type="password" name="current_password" class="w-full bg-dark-300 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" required>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-gray-400 mb-2">Новый пароль</label>
+                <input type="password" name="new_password" class="w-full bg-dark-300 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" required>
+                <p class="text-xs text-gray-500 mt-1">Пароль должен быть не менее 8 символов</p>
+            </div>
+            
+            <div class="mb-6">
+                <label class="block text-gray-400 mb-2">Подтвердите новый пароль</label>
+                <input type="password" name="confirm_password" class="w-full bg-dark-300 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" required>
+            </div>
+            
+            <div class="flex justify-end space-x-3">
+                <button type="button" id="cancelChangePassword" class="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors">
+                    Отмена
+                </button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors">
+                    Сменить пароль
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+
+<!-- Модальное окно загрузки -->
+<div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+    <div class="bg-dark-200 rounded-lg w-full max-w-md mx-4 p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-semibold">Загрузить файл</h3>
+            <button id="closeUploadModal" class="text-gray-400 hover:text-white">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <form id="uploadForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center mb-4 hover:border-indigo-500 transition-colors cursor-pointer" id="dropArea">
+                <i class="bi bi-cloud-upload text-4xl text-gray-500 mb-2"></i>
+                <p class="text-gray-400 mb-1">Перетащите файлы сюда или</p>
+                <button type="button" class="text-indigo-400 hover:text-indigo-300">выберите файл</button>
+                <input type="file" id="fileInput" name="file" class="hidden" required>
+                <div id="fileName" class="text-sm text-gray-300 mt-2 hidden"></div>
+            </div>
+            
+            <!-- Прогресс бар -->
+            <div id="uploadProgress" class="hidden mb-4">
+                <div class="flex justify-between text-sm text-gray-400 mb-1">
+                    <span>Загрузка...</span>
+                    <span id="progressPercent">0%</span>
+                </div>
+                <div class="w-full bg-dark-300 rounded-full h-2">
+                    <div id="progressBar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- Категории - кнопки -->
+            <div class="mb-4">
+                <label class="block text-gray-400 mb-2">Категория</label>
+                <div class="flex flex-wrap gap-2" id="categoryButtons">
+                    <button type="button" class="category-btn active bg-indigo-600 text-white px-3 py-2 rounded-lg transition-colors" data-category-id="">
+                        Все
+                    </button>
+                    {% for category in categories %}
+                    <button type="button" class="category-btn bg-dark-300 hover:bg-dark-100 text-white px-3 py-2 rounded-lg transition-colors" data-category-id="{{ category.id }}">
+                        {{ category.name }}
+                    </button>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="category" id="selectedCategory" value="">
+            </div>
+            
+            <!-- Время жизни - кнопки -->
+            <div class="mb-4">
+                <label class="block text-gray-400 mb-2">Время жизни файла</label>
+                <div class="flex flex-wrap gap-2" id="lifetimeButtons">
+                    <button type="button" class="lifetime-btn active bg-indigo-600 text-white px-3 py-2 rounded-lg transition-colors" data-lifetime="24">
+                        24 часа
+                    </button>
+                    <button type="button" class="lifetime-btn bg-dark-300 hover:bg-dark-100 text-white px-3 py-2 rounded-lg transition-colors" data-lifetime="12">
+                        12 часов
+                    </button>
+                    <button type="button" class="lifetime-btn bg-dark-300 hover:bg-dark-100 text-white px-3 py-2 rounded-lg transition-colors" data-lifetime="6">
+                        6 часов
+                    </button>
+                    <button type="button" class="lifetime-btn bg-dark-300 hover:bg-dark-100 text-white px-3 py-2 rounded-lg transition-colors" data-lifetime="1">
+                        1 час
+                    </button>
+                    {% if user.is_superuser %}
+                    <button type="button" class="lifetime-btn bg-dark-300 hover:bg-dark-100 text-yellow-400 px-3 py-2 rounded-lg transition-colors" data-lifetime="forever" title="Бессрочное хранение">
+                        <i class="bi bi-crown mr-1"></i> <i class="bi bi-infinity"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                <input type="hidden" name="lifetime" id="selectedLifetime" value="24">
+            </div>
+            
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" id="cancelUpload" class="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors">
+                    Отмена
+                </button>
+                <button type="submit" class="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors flex items-center">
+                    <i class="bi bi-cloud-upload mr-2"></i> Загрузить
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+    <!-- Модальное окно информации о файле -->
+<div id="fileModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+    <div class="bg-dark-200 rounded-lg w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center p-6 border-b border-gray-700">
+            <h3 class="text-xl font-semibold">Детали файла</h3>
+            <button id="closeFileModal" class="text-gray-400 hover:text-white">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <div class="p-6">
+            <!-- Информация о файле -->
+            <div class="mb-8">
+                <div class="flex items-center mb-4">
+                    <div id="fileModalIcon" class="w-16 h-16 bg-indigo-900/30 rounded-lg flex items-center justify-center mr-4 cursor-pointer file-icon-preview">
+                        <i class="bi bi-file-earmark text-indigo-400 text-3xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-medium" id="fileModalName">...</h4>
+                        <p class="text-gray-400 text-sm" id="fileModalInfo">...</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between bg-dark-300 p-4 rounded-lg">
+                    <div>
+                        <p class="text-gray-400 text-sm">Осталось времени</p>
+                        <p class="text-lg font-medium text-indigo-400" id="fileModalTimeRemaining">...</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <!-- Кнопка просмотра (только для фото и видео) -->
+                        <button id="fileModalViewBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center hidden">
+                            <i class="bi bi-eye mr-2"></i> Просмотр
+                        </button>
+                        <button id="fileModalDownload" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="bi bi-download mr-2"></i> Скачать
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Статистика -->
+            <div class="mb-8">
+                <h4 class="text-lg font-medium mb-4">Статистика доступа</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-dark-300 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm">Всего скачиваний</p>
+                        <p class="text-xl font-medium" id="fileModalDownloads">0</p>
+                    </div>
+                    <div class="bg-dark-300 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm">Последнее скачивание</p>
+                        <p class="text-xl font-medium" id="fileModalLastDownload">Нет</p>
+                    </div>
+                    <div class="bg-dark-300 p-4 rounded-lg">
+                        <p class="text-gray-400 text-sm">Загружено</p>
+                        <p class="text-xl font-medium" id="fileModalUploadDate">...</p>
+                    </div>
+                </div>
+                
+                <div class="bg-dark-300 rounded-lg overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-gray-800">
+                            <tr>
+                                <th class="text-left py-3 px-4">Время</th>
+                                <th class="text-left py-3 px-4">IP-адрес</th>
+                                <th class="text-left py-3 px-4">Устройство</th>
+                                <th class="text-left py-3 px-4">Скорость</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fileModalLogs">
+                            <!-- Данные будут добавляться через JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Действия -->
+            <div class="flex justify-end space-x-3 pt-4 border-t border-gray-700">
+                <button id="closeFileModalBtn" class="px-4 py-2 border border-gray-600 rounded-lg hover:bg-gray-700 transition-colors">
+                    Закрыть
+                </button>
+                <button id="fileModalDelete" class="px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition-colors flex items-center">
+                    <i class="bi bi-trash mr-2"></i> Удалить файл
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Модальное окно управления категориями -->
+<div id="categoryModal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+    <div class="bg-dark-200 rounded-lg w-full max-w-md mx-4 max-h-[80vh] overflow-hidden">
+        <div class="flex justify-between items-center p-6 border-b border-gray-700">
+            <h3 class="text-xl font-semibold">Управление категориями</h3>
+            <button id="closeCategoryModal" class="text-gray-400 hover:text-white transition-colors">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        
+        <div class="overflow-y-auto max-h-[60vh] modal-content">
+            <!-- Форма создания категории - компактный вариант -->
+            <div class="p-6 border-b border-gray-700">
+                <h4 class="text-lg font-medium mb-4">Создать новую категорию</h4>
+                <form id="categoryForm" class="flex gap-3">
+                    {% csrf_token %}
+                    <div class="flex-1">
+                        <input type="text" name="name" 
+                               class="w-full bg-dark-300 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-1 focus:ring-indigo-500" 
+                               required maxlength="50" 
+                               placeholder="Введите название категории">
+                    </div>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors whitespace-nowrap flex items-center">
+                        <i class="bi bi-plus-lg mr-1"></i>
+                        Создать
+                    </button>
+                </form>
+            </div>
+
+            <!-- Список существующих категорий -->
+            <div class="p-6">
+                <h4 class="text-lg font-medium mb-4">Мои категории</h4>
+                <div id="categoriesList" class="space-y-3">
+                    {% for category in categories %}
+                    <div class="flex items-center justify-between bg-dark-300 p-3 rounded-lg category-item" data-category-id="{{ category.id }}">
+                        <div class="flex items-center min-w-0 flex-1">
+                            <div class="w-3 h-3 rounded-full mr-3 flex-shrink-0" style="background-color: {{ category.color }}"></div>
+                            <span class="text-white truncate">{{ category.name }}</span>
+                            {% if category.file_set.exists %}
+                            <span class="text-xs text-gray-400 ml-2 flex-shrink-0">({{ category.file_set.count }} файлов)</span>
+                            {% endif %}
+                        </div>
+                        <button class="delete-category-btn text-gray-400 hover:text-red-500 p-1 rounded transition-colors flex-shrink-0 {% if category.file_set.exists %}opacity-50 cursor-not-allowed{% endif %}" 
+                                data-category-id="{{ category.id }}"
+                                {% if category.file_set.exists %}disabled title="Нельзя удалить категорию с файлами"{% else %}title="Удалить категорию"{% endif %}>
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    {% empty %}
+                    <p class="text-gray-400 text-center py-4">Нет созданных категорий</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для полноэкранного просмотра изображения -->
+<div id="imageViewerModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60] hidden">
+    <div class="relative w-full h-full flex items-center justify-center">
+        <button id="closeImageViewer" class="absolute top-4 right-4 z-10 bg-red-600 hover:bg-red-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+            <i class="bi bi-x-lg"></i>
+        </button>
+        
+        <button id="prevImage" class="absolute left-4 z-10 bg-gray-800 hover:bg-gray-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        
+        <button id="nextImage" class="absolute right-4 z-10 bg-gray-800 hover:bg-gray-700 text-white w-10 h-10 rounded-full flex items-center justify-center transition-colors">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+        
+        <div class="max-w-4xl max-h-full p-4">
+            <img id="fullSizeImage" src="" alt="" class="max-w-full max-h-full object-contain rounded-lg">
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для полноэкранного просмотра видео -->
+<div id="videoViewerModal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60] hidden">
+    <div class="relative w-full max-w-4xl mx-4">
+        <button id="closeVideoViewer" class="absolute -top-12 right-0 z-10 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors">
+            <i class="bi bi-x-lg mr-2"></i> Закрыть
+        </button>
+        
+        <div class="bg-black rounded-lg overflow-hidden">
+            <video controls class="w-full" id="fullSizeVideo" style="max-height: 80vh;">
+                <source src="" type="video/mp4">
+                Ваш браузер не поддерживает видео.
+            </video>
+        </div>
+        
+        <!-- Простой видеоплеер с основными контролами -->
+        <div class="bg-gray-800 p-4 rounded-b-lg">
+            <div class="flex items-center justify-between mb-3">
+                <button id="playPauseBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white w-8 h-8 rounded-full flex items-center justify-center">
+                    <i class="bi bi-play-fill" id="playPauseIcon"></i>
+                </button>
+                
+                <div class="flex-1 mx-4">
+                    <div class="flex items-center justify-between text-xs text-gray-400 mb-1">
+                        <span id="currentTime">0:00</span>
+                        <span id="duration">0:00</span>
+                    </div>
+                    <input type="range" id="progressBar" class="w-full h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer" min="0" max="100" value="0">
+                </div>
+                
+                <button id="muteBtn" class="text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-700">
+                    <i class="bi bi-volume-up-fill" id="volumeIcon"></i>
+                </button>
+                
+                <input type="range" id="volumeBar" class="w-16 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer ml-2" min="0" max="100" value="100">
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+
+    // Глобальный отладочный обработчик для всех кликов по иконкам
+document.addEventListener('click', function(e) {
+    // Проверяем, был ли клик на иконке файла или внутри нее
+    const fileIcon = e.target.closest('.file-icon');
+    if (fileIcon) {
+        const card = fileIcon.closest('.file-card');
+        if (card) {
+            const fileType = card.getAttribute('data-file-type');
+            const shortUrl = card.getAttribute('data-short-url');
+            console.log('Глобальный обработчик: Клик по иконке файла', {
+                fileType: fileType,
+                shortUrl: shortUrl,
+                target: e.target,
+                currentTarget: e.currentTarget
+            });
+        }
+    }
+});
+
+
+
+    // ========== ФУНКЦИИ ДЛЯ ПРОСМОТРА ИЗОБРАЖЕНИЙ И ВИДЕО ==========
+
+
+    // ========== ФУНКЦИИ ДЛЯ ПРОСМОТРА КОНТЕНТА ==========
+
+// Открытие просмотра изображения
+function openImagePreview(imageUrl) {
+    const modal = document.getElementById('imagePreviewModal');
+    const image = document.getElementById('previewImage');
+    
+    image.src = imageUrl;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+// Закрытие просмотра изображения
+function closeImagePreview() {
+    const modal = document.getElementById('imagePreviewModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Функция для определения типа видео
+// Функция для определения типа видео
+function getVideoType(url) {
+    const ext = url.split('.').pop().toLowerCase();
+    const typeMap = {
+        'mp4': 'video/mp4',
+        'webm': 'video/webm',
+        'ogg': 'video/ogg',
+        'avi': 'video/x-msvideo',
+        'mov': 'video/quicktime',
+        'wmv': 'video/x-ms-wmv',
+        'flv': 'video/x-flv',
+        'mkv': 'video/x-matroska',
+        'm4v': 'video/mp4',
+        '3gp': 'video/3gpp',
+        'ts': 'video/mp2t',
+        'mts': 'video/mp2t',
+        'm2ts': 'video/mp2t',
+        'mpg': 'video/mpeg',
+        'mpeg': 'video/mpeg'
+    };
+    return typeMap[ext] || 'video/mp4'; // По умолчанию mp4
+}
+
+// Улучшенная инициализация видеоконтролов
+function initVideoControls() {
+    const video = document.getElementById('previewVideo');
+    const playPauseBtn = document.getElementById('videoPlayPause');
+    const playIcon = document.getElementById('videoPlayIcon');
+    const muteBtn = document.getElementById('videoMute');
+    const muteIcon = document.getElementById('videoMuteIcon');
+    const volumeSlider = document.getElementById('videoVolume');
+    const progressBar = document.getElementById('videoProgress');
+    const currentTimeEl = document.getElementById('videoCurrentTime');
+    const durationEl = document.getElementById('videoDuration');
+
+    if (!video || !playPauseBtn) {
+        console.log('Video controls elements not found, skipping initialization');
+        return;
+    }
+
+    // Воспроизведение/пауза
+    playPauseBtn.addEventListener('click', function() {
+        if (video.paused || video.ended) {
+            video.play().then(() => {
+                playIcon.className = 'bi bi-pause-fill';
+            }).catch(e => {
+                console.log('Play error:', e);
+            });
+        } else {
+            video.pause();
+            playIcon.className = 'bi bi-play-fill';
+        }
+    });
+
+    // Обновление времени и прогресса
+    video.addEventListener('timeupdate', function() {
+        if (!isNaN(video.duration) && video.duration > 0) {
+            const progress = (video.currentTime / video.duration) * 100;
+            progressBar.value = progress;
+            
+            currentTimeEl.textContent = formatTime(video.currentTime);
+            durationEl.textContent = formatTime(video.duration);
+        }
+    });
+
+    // Перемотка по клику на прогресс-бар
+    progressBar.addEventListener('input', function() {
+        if (!isNaN(video.duration) && video.duration > 0) {
+            const time = video.duration * (this.value / 100);
+            video.currentTime = time;
+        }
+    });
+
+    // Обновление иконки при изменении состояния видео
+    video.addEventListener('play', function() {
+        if (playIcon) playIcon.className = 'bi bi-pause-fill';
+    });
+
+    video.addEventListener('pause', function() {
+        if (playIcon) playIcon.className = 'bi bi-play-fill';
+    });
+
+    video.addEventListener('ended', function() {
+        if (playIcon) playIcon.className = 'bi bi-play-fill';
+    });
+
+    // Громкость
+    if (muteBtn) {
+        muteBtn.addEventListener('click', function() {
+            video.muted = !video.muted;
+            updateVolumeIcons();
+        });
+    }
+
+    if (volumeSlider) {
+        volumeSlider.addEventListener('input', function() {
+            video.volume = this.value / 100;
+            video.muted = (this.value == 0);
+            updateVolumeIcons();
+        });
+    }
+
+    // Обновление длительности при загрузке метаданных
+    video.addEventListener('loadedmetadata', function() {
+        if (!isNaN(video.duration) && video.duration > 0) {
+            if (durationEl) durationEl.textContent = formatTime(video.duration);
+        }
+    });
+
+    // Функция обновления иконок громкости
+    function updateVolumeIcons() {
+        if (!muteIcon || !volumeSlider) return;
+        
+        if (video.muted || video.volume === 0) {
+            muteIcon.className = 'bi bi-volume-mute-fill';
+            volumeSlider.value = 0;
+        } else if (video.volume < 0.5) {
+            muteIcon.className = 'bi bi-volume-down-fill';
+            volumeSlider.value = video.volume * 100;
+        } else {
+            muteIcon.className = 'bi bi-volume-up-fill';
+            volumeSlider.value = video.volume * 100;
+        }
+    }
+
+    // Инициализация иконок громкости
+    updateVolumeIcons();
+}
+
+
+// Функция для открытия предпросмотра из иконки файла
+function openFilePreview(fileType, shortUrl) {
+    console.log('openFilePreview вызван с:', fileType, shortUrl);
+    
+    const fileUrl = `/download/${shortUrl}/`;
+    
+    if (fileType === 'image') {
+        openImagePreview(fileUrl);
+    } else if (fileType === 'video') {
+        openVideoPreview(fileUrl);
+    } else {
+        // Для файлов типа 'other' попробуем определить по URL
+        if (fileUrl.toLowerCase().includes('.mp4') || 
+            fileUrl.toLowerCase().includes('.avi') || 
+            fileUrl.toLowerCase().includes('.mov')) {
+            console.log('Обнаружено видео по расширению URL');
+            openVideoPreview(fileUrl);
+        } else {
+            console.log('Неизвестный тип файла для предпросмотра:', fileType);
+            showNotification('Предпросмотр недоступен для этого типа файла', 'error');
+        }
+    }
+}
+
+// Открытие полноэкранного просмотра изображения
+function openImageViewer(imageUrl) {
+    const modal = document.getElementById('imageViewerModal');
+    const image = document.getElementById('fullSizeImage');
+    
+    image.src = imageUrl;
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+// Закрытие просмотра изображения
+function closeImageViewer() {
+    const modal = document.getElementById('imageViewerModal');
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Открытие полноэкранного просмотра видео
+function openVideoViewer(videoUrl) {
+    const modal = document.getElementById('videoViewerModal');
+    const video = document.getElementById('fullSizeVideo');
+    const source = video.querySelector('source');
+    
+    source.src = videoUrl;
+    video.load();
+    modal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    
+    // Автовоспроизведение при открытии
+    video.play().catch(e => console.log('Автовоспроизведение заблокировано'));
+}
+
+// Закрытие просмотра видео
+function closeVideoViewer() {
+    const modal = document.getElementById('videoViewerModal');
+    const video = document.getElementById('fullSizeVideo');
+    
+    video.pause();
+    modal.classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+// Инициализация видеоплеера
+function initVideoPlayer() {
+    const video = document.getElementById('fullSizeVideo');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const playPauseIcon = document.getElementById('playPauseIcon');
+    const progressBar = document.getElementById('progressBar');
+    const currentTime = document.getElementById('currentTime');
+    const duration = document.getElementById('duration');
+    const muteBtn = document.getElementById('muteBtn');
+    const volumeIcon = document.getElementById('volumeIcon');
+    const volumeBar = document.getElementById('volumeBar');
+
+    // Воспроизведение/пауза
+    playPauseBtn.addEventListener('click', function() {
+        if (video.paused) {
+            video.play();
+            playPauseIcon.className = 'bi bi-pause-fill';
+        } else {
+            video.pause();
+            playPauseIcon.className = 'bi bi-play-fill';
+        }
+    });
+
+    // Обновление прогресса
+    video.addEventListener('timeupdate', function() {
+        const value = (video.currentTime / video.duration) * 100;
+        progressBar.value = value;
+        
+        // Обновление времени
+        currentTime.textContent = formatTime(video.currentTime);
+        duration.textContent = formatTime(video.duration);
+    });
+
+    // Перемотка
+    progressBar.addEventListener('input', function() {
+        const time = video.duration * (this.value / 100);
+        video.currentTime = time;
+    });
+
+    // Громкость
+    muteBtn.addEventListener('click', function() {
+        video.muted = !video.muted;
+        volumeIcon.className = video.muted ? 'bi bi-volume-mute-fill' : 'bi bi-volume-up-fill';
+        volumeBar.value = video.muted ? 0 : video.volume * 100;
+    });
+
+    volumeBar.addEventListener('input', function() {
+        video.volume = this.value / 100;
+        video.muted = this.value == 0;
+        volumeIcon.className = this.value == 0 ? 'bi bi-volume-mute-fill' : 'bi bi-volume-up-fill';
+    });
+
+    // Обновление иконки при окончании видео
+    video.addEventListener('ended', function() {
+        playPauseIcon.className = 'bi bi-play-fill';
+    });
+}
+
+// Форматирование времени (мм:сс)
+function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    
+    const min = Math.floor(seconds / 60);
+    const sec = Math.floor(seconds % 60);
+    return `${min}:${sec.toString().padStart(2, '0')}`;
+}
+function populateFileModal(data) {
+    const file = data.file;
+    const logs = data.download_logs;
+    
+    // Основная информация
+    document.getElementById('fileModalName').textContent = file.original_name;
+    document.getElementById('fileModalInfo').textContent = `${file.file_type.toUpperCase()} / ${formatFileSize(file.file_size)}`;
+    document.getElementById('fileModalTimeRemaining').textContent = file.time_remaining;
+    document.getElementById('fileModalUploadDate').textContent = file.uploaded_at;
+    document.getElementById('fileModalDownloads').textContent = file.download_count;
+    
+    // Иконка файла
+    const modalIcon = document.getElementById('fileModalIcon');
+    const iconClass = getFileIconClass(file.file_type);
+    modalIcon.innerHTML = `<i class="${iconClass} text-3xl"></i>`;
+    
+    // Кнопка просмотра (только для изображений и видео)
+    const viewBtn = document.getElementById('fileModalViewBtn');
+    if (file.file_type === 'image' || file.file_type === 'video') {
+        viewBtn.classList.remove('hidden');
+        viewBtn.onclick = () => openFilePreview(file.file_type, file.short_url);
+        
+        // Делаем иконку в модалке кликабельной
+        modalIcon.classList.add('cursor-pointer', 'hover:scale-105', 'transition-transform');
+        modalIcon.onclick = () => openFilePreview(file.file_type, file.short_url);
+    } else {
+        viewBtn.classList.add('hidden');
+        modalIcon.classList.remove('cursor-pointer', 'hover:scale-105');
+        modalIcon.onclick = null;
+    }
+    
+    // Логи скачиваний
+    const logsTable = document.getElementById('fileModalLogs');
+    if (logs.length > 0) {
+        logsTable.innerHTML = logs.map(log => `
+            <tr class="border-b border-gray-700">
+                <td class="py-3 px-4">${log.time}</td>
+                <td class="py-3 px-4">${log.ip_address}</td>
+                <td class="py-3 px-4">${log.user_agent}</td>
+                <td class="py-3 px-4">${log.download_speed ? log.download_speed + ' MB/s' : 'N/A'}</td>
+            </tr>
+        `).join('');
+    } else {
+        logsTable.innerHTML = '<tr><td colspan="4" class="py-4 px-4 text-center text-gray-400">Нет данных о скачиваниях</td></tr>';
+    }
+    
+    // Кнопка скачивания
+    const downloadBtn = document.getElementById('fileModalDownload');
+    downloadBtn.onclick = () => {
+        window.open(`/download/${file.short_url}/`, '_blank');
+    };
+    
+    // Кнопка удаления
+    const deleteBtn = document.getElementById('fileModalDelete');
+    deleteBtn.onclick = () => {
+        if (confirm('Вы уверены, что хотите удалить этот файл?')) {
+            document.getElementById('fileModal').classList.add('hidden');
+            showLoader();
+            fetch(`/file/${file.id}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.success) {
+                    showNotification('Файл удален');
+                    document.querySelector(`[data-file-id="${file.id}"]`).remove();
+                    applyFilters();
+                } else {
+                    showNotification(data.error, 'error');
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                showNotification('Ошибка удаления файла', 'error');
+            });
+        }
+    };
+}
+
+// Обработка ошибок видео
+function handleVideoErrors() {
+    const video = document.getElementById('previewVideo');
+    if (!video) return;
+
+    video.addEventListener('error', function(e) {
+        console.error('Video error details:', {
+            error: video.error,
+            networkState: video.networkState,
+            readyState: video.readyState,
+            src: video.currentSrc
+        });
+        
+        showNotification('Ошибка загрузки видео. Проверьте формат файла.', 'error');
+    });
+
+    video.addEventListener('loadstart', function() {
+        console.log('Video load started');
+    });
+
+    video.addEventListener('canplay', function() {
+        console.log('Video can play');
+    });
+}
+
+
+// ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+let currentCategory = 'all';
+let currentSearchTerm = '';
+
+// ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function getFileTypeFromName(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const typeMap = {
+        'zip': 'archive', 'rar': 'archive', '7z': 'archive',
+        'jpg': 'image', 'jpeg': 'image', 'png': 'image', 'gif': 'image', 'svg': 'image',
+        'pdf': 'document',
+        'py': 'code', 'js': 'code', 'html': 'code', 'css': 'code',
+        'txt': 'text', 'doc': 'document', 'docx': 'document'
+    };
+    return typeMap[ext] || 'other';
+}
+
+function getFileIconClass(fileType) {
+    const iconMap = {
+        'archive': 'bi bi-file-earmark-zip text-indigo-400',
+        'image': 'bi bi-file-earmark-image text-pink-500',
+        'video': 'bi bi-play-circle text-purple-400',
+        'document': 'bi bi-file-earmark-pdf text-red-500',
+        'code': 'bi bi-file-earmark-code text-green-500',
+        'text': 'bi bi-file-earmark-text text-blue-500',
+        'other': 'bi bi-file-earmark text-gray-400'
+    };
+    return iconMap[fileType] || 'bi bi-file-earmark text-gray-400';
+}
+
+
+// Функция для отладки - проверка типа файла
+function debugFileType(fileElement) {
+    const fileId = fileElement.getAttribute('data-file-id');
+    const fileType = fileElement.getAttribute('data-file-type');
+    const shortUrl = fileElement.getAttribute('data-short-url');
+    const fileName = fileElement.querySelector('.font-medium').textContent;
+    
+    console.log('=== DEBUG FILE INFO ===');
+    console.log('File ID:', fileId);
+    console.log('File Name:', fileName);
+    console.log('File Type (data):', fileType);
+    console.log('Short URL:', shortUrl);
+    console.log('Full URL:', `/download/${shortUrl}/`);
+    console.log('Is image:', fileType === 'image');
+    console.log('Is video:', fileType === 'video');
+    console.log('=====================');
+    
+    return fileType;
+}
+
+
+function getFileBackgroundClass(fileType) {
+    const backgroundMap = {
+        'archive': 'bg-indigo-900/30',
+        'image': 'bg-pink-900/30',
+        'document': 'bg-red-900/30',
+        'code': 'bg-green-900/30',
+        'text': 'bg-blue-900/30'
+    };
+    return backgroundMap[fileType] || 'bg-gray-700';
+}
+
+function getCSRFToken() {
+    const tokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+    return tokenElement ? tokenElement.value : '';
+}
+
+function getCategoryNameById(categoryId) {
+    if (!categoryId || categoryId === '0') return null;
+    const categoryBtn = document.querySelector(`.category-btn[data-category-id="${categoryId}"]`);
+    return categoryBtn ? categoryBtn.textContent.trim() : null;
+}
+
+// ========== ФУНКЦИИ ФИЛЬТРАЦИИ ==========
+function applyFilters() {
+    const fileCards = document.querySelectorAll('.file-card');
+    let visibleCount = 0;
+    
+    fileCards.forEach(card => {
+        const fileCategoryId = card.getAttribute('data-category-id');
+        const fileName = card.querySelector('.font-medium').textContent.toLowerCase();
+        
+        const categoryMatch = currentCategory === 'all' || fileCategoryId === currentCategory;
+        const searchMatch = currentSearchTerm === '' || fileName.includes(currentSearchTerm);
+        
+        if (categoryMatch && searchMatch) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    showNoFilesMessage(visibleCount === 0);
+}
+
+function showNoFilesMessage(show) {
+    let noFilesMessage = document.getElementById('noFilesMessage');
+    
+    if (show && !noFilesMessage) {
+        noFilesMessage = document.createElement('div');
+        noFilesMessage.id = 'noFilesMessage';
+        noFilesMessage.className = 'col-span-full text-center py-12';
+        noFilesMessage.innerHTML = `
+            <i class="bi bi-inbox text-4xl text-gray-600 mb-4"></i>
+            <p class="text-gray-400">Файлы не найдены</p>
+        `;
+        document.getElementById('filesGrid').appendChild(noFilesMessage);
+    } else if (!show && noFilesMessage) {
+        noFilesMessage.remove();
+    }
+}
+
+// ========== ФУНКЦИИ ДЛЯ ФАЙЛОВ ==========
+function addEventListenersToFileCard(card) {
+    const fileId = card.getAttribute('data-file-id');
+    const fileType = card.getAttribute('data-file-type');
+    const shortUrl = card.getAttribute('data-short-url');
+    
+    console.log('Инициализация карточки:', {fileId, fileType, shortUrl});
+    
+    // Клик на карточку для открытия модалки (кроме кнопок и иконок)
+    card.addEventListener('click', function(e) {
+        if (!e.target.closest('button') && !e.target.closest('.file-icon')) {
+            openFileModal(fileId);
+        }
+    });
+    
+    // Находим иконку файла - используем более надежный селектор
+    const fileIcon = card.querySelector('.file-icon');
+    console.log('Найдена иконка файла:', fileIcon, 'для типа:', fileType);
+    
+    if (fileIcon) {
+        // Добавляем обработчик для иконки
+        fileIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            console.log('Обработчик иконки: Клик по', fileType, shortUrl);
+            
+            if (fileType === 'image' || fileType === 'video') {
+                openFilePreview(fileType, shortUrl);
+            }
+        });
+        
+        // Добавляем визуальные подсказки для кликабельных иконок
+        if (fileType === 'image' || fileType === 'video') {
+            fileIcon.style.cursor = 'pointer';
+            fileIcon.title = 'Нажмите для предпросмотра';
+        }
+    } else {
+        console.error('Иконка файла не найдена в карточке:', fileId);
+    }
+
+    // Остальные обработчики (копирование, скачивание, удаление) остаются без изменений
+    const copyBtn = card.querySelector('.copy-link');
+    copyBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const shortUrl = this.getAttribute('data-short-url');
+        const fullUrl = `${window.location.origin}/file/${shortUrl}/`;
+        
+        navigator.clipboard.writeText(fullUrl).then(() => {
+            showNotification('Ссылка скопирована');
+        }).catch(() => {
+            const tempInput = document.createElement('input');
+            tempInput.value = fullUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+            showNotification('Ссылка скопирована');
+        });
+    });
+    
+    const downloadBtn = card.querySelector('.download-btn');
+    downloadBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        window.open(`/download/${shortUrl}/`, '_blank');
+    });
+    
+    const deleteBtn = card.querySelector('.delete-btn');
+    deleteBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (confirm('Удалить файл?')) {
+            showLoader();
+            fetch(`/file/${fileId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.success) {
+                    showNotification('Файл удален');
+                    card.remove();
+                    applyFilters();
+                } else {
+                    showNotification(data.error, 'error');
+                }   
+            })
+            .catch(error => {
+                hideLoader();
+                showNotification('Ошибка удаления', 'error');
+            });
+        }
+    });
+}
+
+// Добавляем обработчики ко всем существующим карточкам
+function initializeFileCards() {
+    document.querySelectorAll('.file-card').forEach(card => {
+        addEventListenersToFileCard(card);
+    });
+}
+
+// ========== ФУНКЦИИ МОДАЛЬНЫХ ОКОН ==========
+function openFileModal(fileId) {
+    showLoader();
+    fetch(`/file/${fileId}/detail/`)
+        .then(response => response.json())
+        .then(data => {
+            hideLoader();
+            populateFileModal(data);
+            document.getElementById('fileModal').classList.remove('hidden');
+        })
+        .catch(error => {
+            hideLoader();
+            showNotification('Ошибка загрузки информации', 'error');
+        });
+}
+
+function populateFileModal(data) {
+    const file = data.file;
+    const logs = data.download_logs;
+    
+    document.getElementById('fileModalName').textContent = file.original_name;
+    document.getElementById('fileModalInfo').textContent = `${file.file_type.toUpperCase()} / ${formatFileSize(file.file_size)}`;
+    document.getElementById('fileModalTimeRemaining').textContent = file.time_remaining;
+    document.getElementById('fileModalUploadDate').textContent = file.uploaded_at;
+    document.getElementById('fileModalDownloads').textContent = file.download_count;
+    
+    // Последнее скачивание
+    const lastDownload = logs.length > 0 ? logs[0].time : 'Нет';
+    document.getElementById('fileModalLastDownload').textContent = lastDownload;
+    
+    // Иконка файла
+    const modalIcon = document.getElementById('fileModalIcon');
+    const iconClass = getFileIconClass(file.file_type);
+    modalIcon.innerHTML = `<i class="${iconClass} text-3xl"></i>`;
+    
+    // Логи скачиваний
+    const logsTable = document.getElementById('fileModalLogs');
+    if (logs.length > 0) {
+        logsTable.innerHTML = logs.map(log => `
+            <tr class="border-b border-gray-700">
+                <td class="py-3 px-4">${log.time}</td>
+                <td class="py-3 px-4">${log.ip_address}</td>
+                <td class="py-3 px-4">${log.user_agent}</td>
+                <td class="py-3 px-4">${log.download_speed ? log.download_speed + ' MB/s' : 'N/A'}</td>
+            </tr>
+        `).join('');
+    } else {
+        logsTable.innerHTML = '<tr><td colspan="4" class="py-4 px-4 text-center text-gray-400">Нет данных о скачиваниях</td></tr>';
+    }
+    
+    // Кнопка скачивания в модалке
+    const downloadBtn = document.getElementById('fileModalDownload');
+    downloadBtn.onclick = () => {
+        window.open(`/download/${file.short_url}/`, '_blank');
+    };
+    
+    // Кнопка удаления в модалке
+    const deleteBtn = document.getElementById('fileModalDelete');
+    deleteBtn.onclick = () => {
+        if (confirm('Вы уверены, что хотите удалить этот файл?')) {
+            document.getElementById('fileModal').classList.add('hidden');
+            showLoader();
+            fetch(`/file/${file.id}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCSRFToken(),
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.success) {
+                    showNotification('Файл удален');
+                    document.querySelector(`[data-file-id="${file.id}"]`).remove();
+                    applyFilters();
+                } else {
+                    showNotification(data.error, 'error');
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                showNotification('Ошибка удаления файла', 'error');
+            });
+        }
+    };
+}
+
+// ========== ФУНКЦИИ ДЛЯ КАТЕГОРИЙ ==========
+function loadCategoriesList() {
+    fetch('/categories/')
+        .then(response => response.json())
+        .then(data => {
+            const categoriesList = document.getElementById('categoriesList');
+            if (data.categories && data.categories.length > 0) {
+                categoriesList.innerHTML = data.categories.map(category => `
+                    <div class="flex items-center justify-between bg-dark-300 p-3 rounded-lg category-item" data-category-id="${category.id}">
+                        <div class="flex items-center min-w-0 flex-1">
+                            <div class="w-3 h-3 rounded-full mr-3 flex-shrink-0" style="background-color: ${category.color}"></div>
+                            <span class="text-white truncate">${category.name}</span>
+                            ${category.file_count > 0 ? `<span class="text-xs text-gray-400 ml-2 flex-shrink-0">(${category.file_count} файлов)</span>` : ''}
+                        </div>
+                        <button class="delete-category-btn text-gray-400 hover:text-red-500 p-1 rounded transition-colors flex-shrink-0 ${category.file_count > 0 ? 'opacity-50 cursor-not-allowed' : ''}" 
+                                data-category-id="${category.id}"
+                                ${category.file_count > 0 ? 'disabled title="Нельзя удалить категорию с файлами"' : 'title="Удалить категорию"'}>
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `).join('');
+                
+                // Обработчики для кнопок удаления категорий
+                document.querySelectorAll('.delete-category-btn:not([disabled])').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const categoryId = this.getAttribute('data-category-id');
+                        deleteCategory(categoryId);
+                    });
+                });
+            } else {
+                categoriesList.innerHTML = '<p class="text-gray-400 text-center py-4">Нет созданных категорий</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка загрузки категорий:', error);
+        });
+}
+
+function deleteCategory(categoryId) {
+    if (!confirm('Вы уверены, что хотите удалить эту категорию?')) {
+        return;
+    }
+    
+    showLoader();
+    fetch(`/category/${categoryId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoader();
+        if (data.success) {
+            showNotification('Категория удалена');
+            loadCategoriesList();
+        } else {
+            showNotification(data.error, 'error');
+        }
+    })
+    .catch(error => {
+        hideLoader();
+        showNotification('Ошибка удаления категории', 'error');
+    });
+}
+
+function addCategoryToMainList(categoryData) {
+    const categoriesContainer = document.getElementById('categories-container');
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+    
+    // Проверяем, не существует ли уже такая категория
+    const existingCategory = document.querySelector(`.category-btn[data-category-id="${categoryData.id}"]`);
+    if (existingCategory) {
+        return;
+    }
+    
+    // Создаем новую кнопку категории
+    const newCategoryBtn = document.createElement('button');
+    newCategoryBtn.className = 'category-btn bg-dark-200 hover:bg-dark-100 px-4 py-2 rounded-lg border border-gray-700 transition-colors';
+    newCategoryBtn.setAttribute('data-category-id', categoryData.id);
+    newCategoryBtn.textContent = categoryData.name;
+    
+    // Добавляем обработчик клика для фильтрации
+    newCategoryBtn.addEventListener('click', function() {
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.classList.remove('bg-indigo-600', 'text-white');
+            btn.classList.add('bg-dark-200', 'hover:bg-dark-100');
+        });
+        
+        this.classList.add('bg-indigo-600', 'text-white');
+        this.classList.remove('bg-dark-200', 'hover:bg-dark-100');
+        
+        currentCategory = categoryData.id;
+        applyFilters();
+    });
+    
+    // Вставляем новую кнопку перед кнопкой добавления
+    categoriesContainer.insertBefore(newCategoryBtn, addCategoryBtn);
+}
+
+function updateCategoryButtonsInModal(categoryData) {
+    const categoryButtons = document.getElementById('categoryButtons');
+    const withoutCategoryBtn = categoryButtons.querySelector('[data-category-id=""]');
+    
+    // Проверяем, не существует ли уже такая категория
+    const existingBtn = categoryButtons.querySelector(`[data-category-id="${categoryData.id}"]`);
+    if (existingBtn) {
+        return;
+    }
+    
+    // Создаем новую кнопку категории
+    const newCategoryBtn = document.createElement('button');
+    newCategoryBtn.type = 'button';
+    newCategoryBtn.className = 'category-btn bg-dark-300 hover:bg-dark-100 text-white px-3 py-2 rounded-lg transition-colors';
+    newCategoryBtn.setAttribute('data-category-id', categoryData.id);
+    newCategoryBtn.textContent = categoryData.name;
+    
+    // Вставляем после кнопки "Без категории"
+    withoutCategoryBtn.parentNode.insertBefore(newCategoryBtn, withoutCategoryBtn.nextSibling);
+}
+
+// ========== ОСНОВНОЙ КОД ==========
+document.addEventListener('DOMContentLoaded', function() {
+
+    
+    // Инициализация фильтрации
+    applyFilters();
+    
+     // Инициализация видеоконтролов
+    initVideoControls();
+    handleVideoErrors();
+
+    // Инициализация карточек файлов
+    initializeFileCards();
+    
+    // Поиск файлов
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', function() {
+        currentSearchTerm = this.value.toLowerCase();
+        applyFilters();
+    });
+    
+
+    // Обработчики для модальных окон просмотра
+document.getElementById('closeImagePreview').addEventListener('click', closeImagePreview);
+document.getElementById('closeVideoPreview').addEventListener('click', closeVideoPreview);
+
+// Закрытие по клику вне контента
+document.getElementById('imagePreviewModal').addEventListener('click', function(e) {
+    if (e.target === this) closeImagePreview();
+});
+
+document.getElementById('videoPreviewModal').addEventListener('click', function(e) {
+    if (e.target === this) closeVideoPreview();
+});
+
+// Инициализация видеоконтролов
+initVideoControls();
+
+// Закрытие по Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeImagePreview();
+        closeVideoPreview();
+    }
+});
+
+
+
+    // Обработчики категорий на главной
+    document.querySelectorAll('.category-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const categoryId = this.getAttribute('data-category-id');
+            
+            document.querySelectorAll('.category-btn').forEach(b => {
+                b.classList.remove('bg-indigo-600', 'text-white');
+                b.classList.add('bg-dark-200', 'hover:bg-dark-100');
+            });
+            
+            this.classList.add('bg-indigo-600', 'text-white');
+            this.classList.remove('bg-dark-200', 'hover:bg-dark-100');
+            
+            currentCategory = categoryId;
+            applyFilters();
+        });
+    });
+    
+    // Модальное окно файла
+    const fileModal = document.getElementById('fileModal');
+    const closeFileModal = document.getElementById('closeFileModal');
+    const closeFileModalBtn = document.getElementById('closeFileModalBtn');
+    
+    [closeFileModal, closeFileModalBtn].forEach(btn => {
+        btn.addEventListener('click', () => {
+            fileModal.classList.add('hidden');
+        });
+    });
+    
+    fileModal.addEventListener('click', function(e) {
+        if (e.target === this) {
+            fileModal.classList.add('hidden');
+        }
+    });
+    
+    // Модальное окно загрузки
+    const uploadBtn = document.getElementById('uploadBtn');
+    const uploadEmptyBtn = document.getElementById('uploadEmptyBtn');
+    const uploadModal = document.getElementById('uploadModal');
+    const closeUploadModal = document.getElementById('closeUploadModal');
+    const cancelUpload = document.getElementById('cancelUpload');
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const dropArea = document.getElementById('dropArea');
+    
+    [uploadBtn, uploadEmptyBtn].forEach(btn => {
+        btn?.addEventListener('click', () => {
+            uploadModal.classList.remove('hidden');
+        });
+    });
+    
+    [closeUploadModal, cancelUpload].forEach(btn => {
+        btn.addEventListener('click', () => {
+            uploadModal.classList.add('hidden');
+            resetUploadForm();
+        });
+    });
+    
+    // Обработчики для кнопок категорий в модалке загрузки
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('category-btn')) {
+            e.preventDefault();
+            
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+                btn.classList.add('bg-dark-300', 'hover:bg-dark-100');
+            });
+            
+            e.target.classList.add('active', 'bg-indigo-600', 'text-white');
+            e.target.classList.remove('bg-dark-300', 'hover:bg-dark-100');
+            
+            document.getElementById('selectedCategory').value = e.target.getAttribute('data-category-id');
+        }
+        
+        // Обработка времени жизни
+        if (e.target.classList.contains('lifetime-btn')) {
+            e.preventDefault();
+            
+            document.querySelectorAll('.lifetime-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-indigo-600', 'text-white');
+                btn.classList.add('bg-dark-300', 'hover:bg-dark-100');
+                
+                if (btn.getAttribute('data-lifetime') === 'forever') {
+                    btn.classList.add('text-yellow-400');
+                }
+            });
+            
+            e.target.classList.add('active', 'bg-indigo-600', 'text-white');
+            e.target.classList.remove('bg-dark-300', 'hover:bg-dark-100', 'text-yellow-400');
+            
+            document.getElementById('selectedLifetime').value = e.target.getAttribute('data-lifetime');
+        }
+    });
+    
+    // Drag and drop
+    dropArea.addEventListener('click', () => fileInput.click());
+    
+    fileInput.addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            document.getElementById('fileName').textContent = this.files[0].name;
+            document.getElementById('fileName').classList.remove('hidden');
+        }
+    });
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => {
+            dropArea.classList.add('border-indigo-500');
+            dropArea.classList.remove('border-gray-600');
+        }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropArea.addEventListener(eventName, () => {
+            dropArea.classList.remove('border-indigo-500');
+            dropArea.classList.add('border-gray-600');
+        }, false);
+    });
+    
+    dropArea.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        
+        if (files.length > 0) {
+            document.getElementById('fileName').textContent = files[0].name;
+            document.getElementById('fileName').classList.remove('hidden');
+        }
+    }
+    
+
+    // Обработчики для модальных окон просмотра
+document.getElementById('closeImageViewer').addEventListener('click', closeImageViewer);
+document.getElementById('closeVideoViewer').addEventListener('click', closeVideoViewer);
+
+// Закрытие по клику вне контента
+document.getElementById('imageViewerModal').addEventListener('click', function(e) {
+    if (e.target === this) closeImageViewer();
+});
+
+document.getElementById('videoViewerModal').addEventListener('click', function(e) {
+    if (e.target === this) closeVideoViewer();
+});
+
+// Инициализация видеоплеера
+initVideoPlayer();
+
+// Закрытие по Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeImageViewer();
+        closeVideoViewer();
+    }
+});
+
+
+    // Загрузка файла
+    uploadForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const file = fileInput.files[0];
+        
+        if (!file) {
+            showNotification('Выберите файл', 'error');
+            return;
+        }
+        
+        if (file.size > 5 * 1024 * 1024 * 1024) {
+            showNotification('Файл слишком большой', 'error');
+            return;
+        }
+        
+        showUploadProgress();
+        
+        const xhr = new XMLHttpRequest();
+        
+        xhr.upload.addEventListener('progress', function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                document.getElementById('progressBar').style.width = percentComplete + '%';
+                document.getElementById('progressPercent').textContent = Math.round(percentComplete) + '%';
+            }
+        });
+        
+        xhr.addEventListener('load', function() {
+            if (xhr.status === 200) {
+                const response = JSON.parse(xhr.responseText);
+                
+                if (response.success) {
+                    showNotification('Файл загружен!');
+                    resetUploadForm();
+                    uploadModal.classList.add('hidden');
+                    
+                    // Здесь можно добавить обновление списка файлов
+                    location.reload(); // Просто перезагружаем страницу для простоты
+                } else {
+                    showNotification(response.error || 'Ошибка', 'error');
+                    hideUploadProgress();
+                }
+            } else {
+                showNotification('Ошибка загрузки', 'error');
+                hideUploadProgress();
+            }
+        });
+        
+        xhr.open('POST', '/upload/');
+        xhr.send(formData);
+    });
+    
+    // Модальное окно категорий
+    const categoryModal = document.getElementById('categoryModal');
+    const addCategoryBtn = document.getElementById('addCategoryBtn');
+    const closeCategoryModal = document.getElementById('closeCategoryModal');
+    const categoryForm = document.getElementById('categoryForm');
+    
+    addCategoryBtn.addEventListener('click', () => {
+        loadCategoriesList();
+        categoryModal.classList.remove('hidden');
+    });
+    
+    closeCategoryModal.addEventListener('click', () => {
+        categoryModal.classList.add('hidden');
+        categoryForm.reset();
+    });
+    
+    // Создание категории
+    categoryForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const input = this.querySelector('input[name="name"]');
+        const categoryName = input.value.trim();
+        
+        if (!categoryName) {
+            showNotification('Введите название категории', 'error');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-arrow-repeat animate-spin mr-1"></i> Создание...';
+        
+        fetch('/category/create/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-plus-lg mr-1"></i> Создать';
+            
+            if (data.success) {
+                showNotification('Категория создана!');
+                input.value = '';
+                addCategoryToMainList(data.category);
+                loadCategoriesList();
+                updateCategoryButtonsInModal(data.category);
+            } else {
+                showNotification(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-plus-lg mr-1"></i> Создать';
+            showNotification('Ошибка сети', 'error');
+        });
+    });
+    
+    // Смена пароля
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    const closeChangePasswordModal = document.getElementById('closeChangePasswordModal');
+    const cancelChangePassword = document.getElementById('cancelChangePassword');
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    
+    changePasswordBtn.addEventListener('click', () => {
+        changePasswordModal.classList.remove('hidden');
+    });
+    
+    [closeChangePasswordModal, cancelChangePassword].forEach(btn => {
+        btn.addEventListener('click', () => {
+            changePasswordModal.classList.add('hidden');
+            changePasswordForm.reset();
+        });
+    });
+    
+    changePasswordForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        showLoader();
+        fetch('/change-password/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoader();
+            if (data.success) {
+                showNotification('Пароль изменен');
+                changePasswordModal.classList.add('hidden');
+                changePasswordForm.reset();
+            } else {
+                showNotification(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            hideLoader();
+            showNotification('Ошибка сети', 'error');
+        });
+    });
+    
+    // Закрытие модальных окон при клике вне их
+    [uploadModal, changePasswordModal, fileModal, categoryModal].forEach(modal => {
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        }
+    });
+    
+    // Вспомогательные функции для загрузки
+    function showUploadProgress() {
+        document.getElementById('uploadProgress').classList.remove('hidden');
+        uploadForm.querySelector('button[type="submit"]').disabled = true;
+    }
+    
+    function hideUploadProgress() {
+        document.getElementById('uploadProgress').classList.add('hidden');
+        uploadForm.querySelector('button[type="submit"]').disabled = false;
+    }
+    
+    function resetUploadForm() {
+        uploadForm.reset();
+        document.getElementById('fileName').classList.add('hidden');
+        document.getElementById('progressBar').style.width = '0%';
+        document.getElementById('progressPercent').textContent = '0%';
+        hideUploadProgress();
+    }
+    
+    console.log('DevCloud initialized successfully');
+});
+
+function logout() {
+    if (confirm('Вы уверены, что хотите выйти?')) {
+        showLoader();
+        
+        fetch('{% url "logout" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCSRFToken(),
+            }
+        })
+        .then(response => {
+            hideLoader();
+            if (response.ok) {
+                window.location.href = '/';
+            } else {
+                showNotification('Ошибка при выходе', 'error');
+            }
+        })
+        .catch(error => {
+            hideLoader();
+            showNotification('Ошибка сети', 'error');
+        });
+    }
+}
+
+
+</script>
+
+{% endblock %}
