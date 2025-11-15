@@ -15,7 +15,7 @@ bcrypt==4.1.3
 python-decouple==3.8
 Pillow==10.4.0
 
-# Compression (CSS + JS)
+# Compression
 django-compressor==4.4
-rcssmin==1.1.0
+rcssmin==1.1.1
 rjsmin==1.2.1
